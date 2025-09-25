@@ -54,11 +54,24 @@ func main() {
 			// Профиль пользователя
 			protected.GET("/profile", handlers.GetProfile)
 
+			// Работа с файлами
+			protected.POST("/files/upload", handlers.UploadFiles) // Загрузка файлов
+			protected.GET("/files/:id", handlers.GetFile)               // Скачать файл
+			protected.GET("/files", handlers.GetEntityFiles)    // Список файлов сущности
+			protected.DELETE("/files/:id", handlers.DeleteFile) // Удалить файл
+
+			// Проекты (доступ для всех авторизованных пользователей)
+			protected.GET("/projects", handlers.GetProjects)    // Список проектов
+			protected.GET("/projects/:id", handlers.GetProject) // Один проект
+
 			// Эндпоинты только для менеджеров
 			manager := protected.Group("/")
 			manager.Use(middleware.RoleMiddleware(models.RoleManager))
 			{
-				// Здесь будут эндпоинты для менеджеров
+				// Управление проектами
+				manager.POST("/projects", handlers.CreateProject)       // Создание проекта
+				manager.PUT("/projects/:id", handlers.UpdateProject)    // Обновление проекта
+				manager.DELETE("/projects/:id", handlers.DeleteProject) // Удаление проекта
 			}
 
 			// Эндпоинты для менеджеров и инженеров
@@ -66,6 +79,8 @@ func main() {
 			staff.Use(middleware.RoleMiddleware(models.RoleManager, models.RoleEngineer))
 			{
 				// Здесь будут эндпоинты для создания и редактирования дефектов
+				// staff.POST("/defects", handlers.CreateDefect)
+				// staff.PUT("/defects/:id", handlers.UpdateDefect)
 			}
 		}
 	}

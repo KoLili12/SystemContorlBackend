@@ -45,6 +45,8 @@ func InitDB() {
 	err = DB.AutoMigrate(
 		&models.Role{},
 		&models.User{},
+		&models.Project{},
+		&models.Attachment{},
 	)
 	if err != nil {
 		log.Fatal("Failed to migrate database: ", err)
