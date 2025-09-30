@@ -10,6 +10,65 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetProjectFiles получает все файлы проекта
+func GetProjectFiles(c *gin.Context) {
+    projectID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID проекта"})
+        return
+    }
+
+    files, err := services.GetAttachments(models.EntityTypeProject, uint(projectID))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"files": files})
+}
+
+// GetProjectMainImage возвращает первое изображение проекта
+func GetProjectMainImage(c *gin.Context) {
+	projectID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID проекта"})
+		return
+	}
+
+	// Получаем файлы проекта
+	files, err := services.GetAttachments(models.EntityTypeProject, uint(projectID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Находим первое изображение
+	var imageAttachment *models.Attachment
+	for _, file := range files {
+		if file.FileType == models.FileTypeImage {
+			// Получаем полную информацию о файле
+			att, err := services.GetAttachmentByID(file.ID)
+			if err == nil {
+				imageAttachment = att
+				break
+			}
+		}
+	}
+
+	if imageAttachment == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Изображение не найдено"})
+		return
+	}
+
+	// Устанавливаем заголовки
+	c.Header("Content-Type", imageAttachment.ContentType)
+	c.Header("Content-Disposition", `inline; filename="`+imageAttachment.OriginalName+`"`)
+	c.Header("Cache-Control", "public, max-age=3600")
+
+	// Отдаем файл
+	c.File(imageAttachment.FilePath)
+}
+
 // UploadFiles загружает файлы для сущности (проект, дефект)
 func UploadFiles(c *gin.Context) {
 	entityType := c.PostForm("entity_type")
@@ -138,17 +197,23 @@ func GetEntityFiles(c *gin.Context) {
 	})
 }
 
-// DeleteFile удаляет файл
 func DeleteFile(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	// Получаем ID файла из URL параметра
+	attachmentID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID файла"})
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	// Получаем ID пользователя из контекста
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Пользователь не авторизован"})
+		return
+	}
 
-	err = services.DeleteAttachment(uint(id), userID.(uint))
+	// Удаляем файл
+	err = services.DeleteAttachment(uint(attachmentID), userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return

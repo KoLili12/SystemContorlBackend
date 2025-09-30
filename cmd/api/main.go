@@ -60,6 +60,9 @@ func main() {
 			protected.GET("/files", handlers.GetEntityFiles)    // Список файлов сущности
 			protected.DELETE("/files/:id", handlers.DeleteFile) // Удалить файл
 
+			protected.GET("/projects/:id/files", handlers.GetProjectFiles)
+			protected.GET("/projects/:id/image", handlers.GetProjectMainImage)
+
 			// Проекты (доступ для всех авторизованных пользователей)
 			protected.GET("/projects", handlers.GetProjects)    // Список проектов
 			protected.GET("/projects/:id", handlers.GetProject) // Один проект

@@ -133,10 +133,12 @@ func GetAttachments(entityType string, entityID uint) ([]models.AttachmentRespon
 	return responses, nil
 }
 
-// DeleteAttachment удаляет файл
-func DeleteAttachment(id uint, userID uint) error {
+// DeleteAttachment удаляет ОДИН конкретный файл по его ID
+func DeleteAttachment(attachmentID uint, userID uint) error {
 	var attachment models.Attachment
-	if err := database.DB.First(&attachment, id).Error; err != nil {
+
+	// Получаем файл по ID
+	if err := database.DB.First(&attachment, attachmentID).Error; err != nil {
 		return errors.New("файл не найден")
 	}
 
@@ -149,18 +151,55 @@ func DeleteAttachment(id uint, userID uint) error {
 	// Удаляем файл с диска
 	if err := os.Remove(attachment.FilePath); err != nil {
 		// Логируем ошибку, но продолжаем удаление из БД
-		fmt.Printf("Ошибка удаления файла %s: %v\n", attachment.FilePath, err)
+		fmt.Printf("Предупреждение: не удалось удалить файл %s: %v\n", attachment.FilePath, err)
 	}
 
 	// Удаляем запись из БД
-	return database.DB.Delete(&attachment).Error
+	if err := database.DB.Delete(&attachment).Error; err != nil {
+		return errors.New("не удалось удалить запись из базы данных")
+	}
+
+	return nil
 }
 
-// GetAttachmentByID получает файл по ID для скачивания
+// DeleteAttachmentsByEntity удаляет ВСЕ файлы, связанные с сущностью (проект, дефект)
+// Эта функция вызывается при удалении самого проекта/дефекта
+func DeleteAttachmentsByEntity(entityType string, entityID uint) error {
+	var attachments []models.Attachment
+
+	// Получаем все файлы, связанные с сущностью
+	if err := database.DB.Where("entity_type = ? AND entity_id = ?", entityType, entityID).
+		Find(&attachments).Error; err != nil {
+		return err
+	}
+
+	// Если файлов нет - это нормально, не ошибка
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	// Удаляем каждый файл с диска
+	for _, attachment := range attachments {
+		if err := os.Remove(attachment.FilePath); err != nil {
+			// Логируем ошибку, но продолжаем
+			fmt.Printf("Предупреждение: не удалось удалить файл %s: %v\n", attachment.FilePath, err)
+		}
+	}
+
+	// Удаляем все записи из БД
+	if err := database.DB.Where("entity_type = ? AND entity_id = ?", entityType, entityID).
+		Delete(&models.Attachment{}).Error; err != nil {
+		return errors.New("не удалось удалить записи из базы данных")
+	}
+
+	return nil
+}
+
+
 func GetAttachmentByID(id uint) (*models.Attachment, error) {
 	var attachment models.Attachment
-	if err := database.DB.Where("entity_id = ?", id).Find(&attachment).Error; err != nil {
-		return nil, errors.New("файлы не найдены")
+	if err := database.DB.First(&attachment, id).Error; err != nil {
+		return nil, errors.New("файл не найден")
 	}
 	return &attachment, nil
 }

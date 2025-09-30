@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-
+	"fmt"
 	"SystemContorlBackend/internal/database"
 	"SystemContorlBackend/internal/models"
 	"gorm.io/gorm"
@@ -117,5 +117,13 @@ func DeleteProject(id uint) error {
 		return err
 	}
 
-	return database.DB.Delete(&project).Error
+	if err := DeleteAttachmentsByEntity(models.EntityTypeProject, id); err != nil {
+        fmt.Printf("Предупреждение при удалении файлов проекта: %v\n", err)
+    }
+
+    if err := database.DB.Delete(&project).Error; err != nil {
+        return errors.New("не удалось удалить проект")
+    }
+
+    return nil
 }
