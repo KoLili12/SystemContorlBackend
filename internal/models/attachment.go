@@ -16,9 +16,9 @@ type Attachment struct {
 	ContentType  string         `gorm:"size:100" json:"content_type"`
 	FileType     string         `gorm:"size:50" json:"file_type"` // "image", "document"
 	
-	// Полиморфные связи - к чему прикреплен файл
-	EntityType   string         `gorm:"size:50;not null" json:"entity_type"` // "project", "defect"
-	EntityID     uint           `gorm:"not null" json:"entity_id"`
+	// Полиморфные связи - к чему прикреплен файл (без FK constraint)
+	EntityType   string         `gorm:"size:50;not null;index:idx_entity" json:"entity_type"` // "project", "defect"
+	EntityID     uint           `gorm:"not null;index:idx_entity" json:"entity_id"`
 	
 	UploadedBy   uint           `json:"uploaded_by"`
 	Uploader     User           `gorm:"foreignKey:UploadedBy" json:"uploader,omitempty"`

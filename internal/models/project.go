@@ -17,7 +17,7 @@ type Project struct {
 	EndDate     *time.Time     `json:"end_date"`
 	CreatedBy   uint           `json:"created_by"`
 	Creator     User           `gorm:"foreignKey:CreatedBy" json:"creator,omitempty"`
-	Attachments []Attachment   `gorm:"foreignKey:EntityID;where:entity_type = 'project'" json:"attachments,omitempty"`
+	Attachments []Attachment   `gorm:"polymorphic:Entity;polymorphicValue:project" json:"attachments,omitempty"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`

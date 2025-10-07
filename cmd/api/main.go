@@ -40,34 +40,44 @@ func main() {
 	// API группа
 	api := router.Group("/api/v1")
 	{
-		// Публичные эндпоинты (без аутентификации)
+		// ============================================
+		// ПУБЛИЧНЫЕ ЭНДПОИНТЫ (без аутентификации)
+		// ============================================
 		auth := api.Group("/auth")
 		{
-			auth.POST("/register", handlers.Register)
-			auth.POST("/login", handlers.Login)
+			auth.POST("/register", handlers.Register) // Регистрация
+			auth.POST("/login", handlers.Login)       // Вход
 		}
 
-		// Защищенные эндпоинты (требуют аутентификации)
+		// ============================================
+		// ЗАЩИЩЕННЫЕ ЭНДПОИНТЫ (требуют аутентификации)
+		// ============================================
 		protected := api.Group("/")
 		protected.Use(middleware.AuthMiddleware())
 		{
-			// Профиль пользователя
+			// === ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ===
 			protected.GET("/profile", handlers.GetProfile)
 
-			// Работа с файлами
-			protected.POST("/files/upload", handlers.UploadFiles) // Загрузка файлов
-			protected.GET("/files/:id", handlers.GetFile)               // Скачать файл
-			protected.GET("/files", handlers.GetEntityFiles)    // Список файлов сущности
-			protected.DELETE("/files/:id", handlers.DeleteFile) // Удалить файл
+			// === РАБОТА С ФАЙЛАМИ ===
+			protected.POST("/files/upload", handlers.UploadFiles)   // Загрузка файлов
+			protected.GET("/files/:id", handlers.GetFile)           // Скачать файл
+			protected.GET("/files", handlers.GetEntityFiles)        // Список файлов сущности
+			protected.DELETE("/files/:id", handlers.DeleteFile)     // Удалить файл
 
-			protected.GET("/projects/:id/files", handlers.GetProjectFiles)
-			protected.GET("/projects/:id/image", handlers.GetProjectMainImage)
+			// === ПРОЕКТЫ (доступ для всех авторизованных) ===
+			protected.GET("/projects", handlers.GetProjects)              // Список проектов
+			protected.GET("/projects/:id", handlers.GetProject)           // Один проект
+			protected.GET("/projects/:id/files", handlers.GetProjectFiles)       // Файлы проекта
+			protected.GET("/projects/:id/image", handlers.GetProjectMainImage)   // Главное изображение
+			protected.GET("/projects/:id/defects/stats", handlers.GetProjectDefectsStats) // Статистика по дефектам
 
-			// Проекты (доступ для всех авторизованных пользователей)
-			protected.GET("/projects", handlers.GetProjects)    // Список проектов
-			protected.GET("/projects/:id", handlers.GetProject) // Один проект
+			// === ДЕФЕКТЫ (доступ для всех авторизованных) ===
+			protected.GET("/defects", handlers.GetDefects)     // Список дефектов (с фильтрацией)
+			protected.GET("/defects/:id", handlers.GetDefect)  // Один дефект
 
-			// Эндпоинты только для менеджеров
+			// ============================================
+			// ЭНДПОИНТЫ ТОЛЬКО ДЛЯ МЕНЕДЖЕРОВ
+			// ============================================
 			manager := protected.Group("/")
 			manager.Use(middleware.RoleMiddleware(models.RoleManager))
 			{
@@ -77,13 +87,17 @@ func main() {
 				manager.DELETE("/projects/:id", handlers.DeleteProject) // Удаление проекта
 			}
 
-			// Эндпоинты для менеджеров и инженеров
-			staff := protected.Group("/")
-			staff.Use(middleware.RoleMiddleware(models.RoleManager, models.RoleEngineer))
+			// ============================================
+			// ЭНДПОИНТЫ ДЛЯ ИНЖЕНЕРОВ
+			// ============================================
+			engineer := protected.Group("/")
+			engineer.Use(middleware.RoleMiddleware(models.RoleEngineer))
 			{
-				// Здесь будут эндпоинты для создания и редактирования дефектов
-				// staff.POST("/defects", handlers.CreateDefect)
-				// staff.PUT("/defects/:id", handlers.UpdateDefect)
+				// Управление дефектами
+				engineer.POST("/defects", handlers.CreateDefect)                      // Создание дефекта
+				engineer.PUT("/defects/:id", handlers.UpdateDefect)                   // Обновление дефекта
+				engineer.PATCH("/defects/:id/status", handlers.UpdateDefectStatus)    // Изменение статуса
+				engineer.DELETE("/defects/:id", handlers.DeleteDefect)                // Удаление дефекта
 			}
 		}
 	}

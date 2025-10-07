@@ -41,11 +41,12 @@ func InitDB() {
 		log.Fatal("Failed to connect to database: ", err)
 	}
 
-	// Автомиграция моделей
+	// Автомиграция моделей в правильном порядке
 	err = DB.AutoMigrate(
 		&models.Role{},
 		&models.User{},
 		&models.Project{},
+		&models.Defect{},      // Добавлена модель дефектов
 		&models.Attachment{},
 	)
 	if err != nil {
@@ -54,6 +55,8 @@ func InitDB() {
 
 	// Создаем роли по умолчанию
 	seedRoles()
+	
+	log.Println("Database initialized successfully")
 }
 
 // seedRoles создает роли согласно ТЗ
